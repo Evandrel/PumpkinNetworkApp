@@ -1,6 +1,6 @@
 # PumpNet
 
-**English** | [中文](#中文说明)
+**English** | [繁體中文](#繁體中文說明)
 
 PumpNet is a private SwiftUI utility app that brings together Minecraft, Apple, network, and AI tools, with an additional reader for articles from `pcl2.top`. Tools are the main experience and the default tab when the app opens.
 
@@ -19,6 +19,8 @@ PumpNet is a private SwiftUI utility app that brings together Minecraft, Apple, 
 - **SHSH2 Checker** — Looks up saved SHSH blobs by ECID and keeps local search history.
 - **IP Lookup** — Shows either the public IP address alone or extended region and ISP information after a privacy warning.
 - **AI Chat** — Connects to user-provided OpenAI-compatible services, automatically loads their models, and supports three configurations by default with an optional on-device unlock for more.
+
+> **AI Chat unlock code:** `www.pcl2.top`. The first three configurations can be added normally. To add a fourth configuration, choose **Unlock More Configurations** and enter this code to remove the configuration limit on this device.
 
 AI Chat also provides:
 
@@ -99,101 +101,103 @@ PumpNet is under active development and is currently a private project. No open-
 
 ---
 
-# 中文说明
+# 繁體中文說明
 
-[English](#pumpnet) | **中文**
+[English](#pumpnet) | **繁體中文**
 
-PumpNet 是一款私人开发的 SwiftUI 实用工具应用，主要提供 Minecraft、Apple、网络和 AI 工具，同时附带用于阅读 `pcl2.top` 文章的阅读器。Tools 是应用的主要内容，也是启动后默认显示的页面。
+PumpNet 是一款私人開發的 SwiftUI 實用工具 App，主要提供 Minecraft、Apple、網路和 AI 工具，同時附帶用於閱讀 `pcl2.top` 文章的閱讀器。工具是 App 的主要內容，也是啟動後預設顯示的頁面。
 
 ## 功能
 
 ### 文章
 
-- 通过 `pcl2.top` 的 WordPress REST API 读取公开文章。
-- 从未获取过文章的用户需要主动点击后才会发起第一次请求。
-- 使用本地缓存加快之后的启动和加载速度。
-- 支持手动刷新，并为更新后的文章列表添加动画。
+- 透過 `pcl2.top` 的 WordPress REST API 讀取公開文章。
+- 從未取得過文章的使用者需要主動按一下後，才會發出第一次請求。
+- 使用本機快取加快後續啟動和載入速度。
+- 支援手動重新整理，並為更新後的文章列表加入動畫。
 
 ### 工具
 
-- **Minecraft Skin Stealer** —— 查询 Java 版玩家皮肤、查看原始贴图、拖动查看 SceneKit 3D 模型，并分享皮肤文件。
-- **SHSH2 Checker** —— 通过 ECID 查询已保存的 SHSH，并在本地保留查询历史。
-- **IP Lookup** —— 在显示隐私警告后，可以只查询公网 IP，也可以查询地区和 ISP 等详细信息。
-- **AI Chat** —— 连接用户自行提供的 OpenAI-compatible 服务并自动刷新模型，默认最多保存三个配置，也可以在本机输入解锁码解除限制。
+- **Minecraft Skin Stealer** —— 查詢 Java 版玩家皮膚、查看原始貼圖、拖曳查看 SceneKit 3D 模型，並分享皮膚檔案。
+- **SHSH2 Checker** —— 透過 ECID 查詢已儲存的 SHSH，並在本機保留查詢紀錄。
+- **IP Lookup** —— 顯示隱私警告後，可以只查詢公開 IP，也可以查詢地區和 ISP 等詳細資訊。
+- **AI Chat** —— 連接使用者自行提供的 OpenAI-compatible 服務並自動重新整理模型，預設最多儲存三個設定，也可以在本機輸入解鎖碼解除限制。
 
-AI Chat 还支持：
+> **AI Chat 解鎖碼：** `www.pcl2.top`。前三個設定可以直接新增；要新增第四個設定時，按下「Unlock More Configurations」並輸入此解鎖碼，即可在此裝置解除設定數量限制。
 
-- 为每个服务设置名称、API Key、Base URL 和模型。
-- 使用 Apple Keychain 安全保存 API Key。
-- 提供独立会话列表，每个会话分别保存消息、预设、服务商和模型。
-- 可以在会话内部切换服务配置和模型，并保留当前上下文。
-- 清空聊天以及分享聊天记录。
-- 兼容多种常见的模型列表和聊天回复 JSON 格式。
+AI Chat 也支援：
 
-AI Base URL 示例：
+- 為每個服務設定名稱、API Key、Base URL 和模型。
+- 使用 Apple Keychain 安全儲存 API Key。
+- 提供獨立對話列表，每個對話分別儲存訊息、預設、服務供應商和模型。
+- 可以在對話內切換服務設定和模型，並保留目前上下文。
+- 清空聊天與分享聊天紀錄。
+- 相容多種常見的模型列表和聊天回覆 JSON 格式。
 
-| 服务商 | Base URL |
+AI Base URL 範例：
+
+| 服務供應商 | Base URL |
 | --- | --- |
 | OpenAI | `https://api.openai.com/v1` |
 | xAI / Grok | `https://api.x.ai/v1` |
 | Google Gemini | `https://generativelanguage.googleapis.com/v1beta/openai` |
-| 自定义服务 | `https://example.com/v1` |
+| 自訂服務 | `https://example.com/v1` |
 
-自定义服务必须使用 HTTPS，并提供兼容的 `GET /models` 和 `POST /chat/completions` 接口。普通聊天产品的会员订阅不一定包含 API 权限或 API 额度。
+自訂服務必須使用 HTTPS，並提供相容的 `GET /models` 和 `POST /chat/completions` 介面。一般聊天產品的會員訂閱不一定包含 API 權限或 API 額度。
 
-### 设置与关于
+### 設定與關於
 
-- 在用户确认后清除文章缓存和网络响应缓存。
-- 提供为未来 Tor 支持预留的 Advanced Privacy Protection 界面。
-- 提供独立的 About 页面。
+- 在使用者確認後清除文章快取和網路回應快取。
+- 提供為未來 Tor 支援預留的 Advanced Privacy Protection 介面。
+- 提供獨立的 About 頁面。
 
-> **重要：** Tor 代理目前没有实际启用。在 Tor 运行组件和防泄漏网络层完成之前，相关控制按钮会保持禁用。
+> **重要：** Tor 代理目前尚未實際啟用。在 Tor 執行元件和防洩漏網路層完成之前，相關控制按鈕會保持停用。
 
-## 环境要求
+## 環境需求
 
-- 安装了 Xcode 26 或更新版本的 macOS。
+- 安裝了 Xcode 26 或更新版本的 macOS。
 - iOS 17.0 或更新版本。
-- 在线功能需要网络连接。
-- AI Chat 可能需要服务商提供的 API Key 和可用 API 额度。
+- 線上功能需要網路連線。
+- AI Chat 可能需要服務供應商提供的 API Key 和可用 API 額度。
 
-当前项目已使用 Xcode 27 beta 和 iOS 27 Simulator SDK 编译测试。
+目前專案已使用 Xcode 27 beta 和 iOS 27 Simulator SDK 編譯測試。
 
-## 运行项目
+## 執行專案
 
-1. 使用 Xcode 打开 `PumpNet App.xcodeproj`。
-2. 选择 **PumpNet App** Scheme。
-3. 选择 iPhone 或 iPad 模拟器。
+1. 使用 Xcode 開啟 `PumpNet App.xcodeproj`。
+2. 選擇 **PumpNet App** Scheme。
+3. 選擇 iPhone 或 iPad 模擬器。
 4. 按下 **Run**（`⌘R`）。
 
-## 项目结构
+## 專案結構
 
 ```text
 PumpNetApp/
-├── Models/       文章、皮肤、SHSH、IP 和 AI Chat 数据模型
-├── Services/     WordPress、Mojang、SHSH、IP、AI、缓存和 Keychain 服务
-├── ViewModels/   可观察状态与功能逻辑
-├── Views/        SwiftUI 页面和 SceneKit 皮肤预览
+├── Models/       文章、皮膚、SHSH、IP 和 AI Chat 資料模型
+├── Services/     WordPress、Mojang、SHSH、IP、AI、快取和 Keychain 服務
+├── ViewModels/   可觀察狀態與功能邏輯
+├── Views/        SwiftUI 頁面和 SceneKit 皮膚預覽
 ├── About.swift
 ├── ContentView.swift
 └── PumpNetApp.swift
 ```
 
-各项功能已经拆分到独立文件中，没有全部堆放在一个大型 `ContentView` 内。
+各項功能已拆分至獨立檔案，沒有全部堆放在一個大型 `ContentView` 內。
 
-## 数据与隐私
+## 資料與隱私
 
-PumpNet 只会在用户使用对应功能时访问相关第三方服务：
+PumpNet 只會在使用者使用對應功能時存取相關第三方服務：
 
-- `pcl2.top`：获取公开 WordPress 文章。
-- Mojang 服务：查询 Minecraft 玩家资料和皮肤。
-- `jjr.one`：查询 SHSH。
-- `api64.ipify.org` 和 `ipinfo.io`：查询公网 IP。
-- 用户选择的 AI 服务商：刷新模型并完成对话。
+- `pcl2.top`：取得公開 WordPress 文章。
+- Mojang 服務：查詢 Minecraft 玩家資料和皮膚。
+- `jjr.one`：查詢 SHSH。
+- `api64.ipify.org` 和 `ipinfo.io`：查詢公開 IP。
+- 使用者選擇的 AI 服務供應商：重新整理模型並完成對話。
 
-IP 查询服务商能够看到连接所使用的公网 IP。AI 服务商会收到生成回答所需的预设和聊天消息。如果在现有会话中切换服务商，下一次请求会把该会话上下文发送给新服务商。使用前请自行查看相应服务商的隐私政策。
+IP 查詢服務供應商能看到連線所使用的公開 IP。AI 服務供應商會收到產生回答所需的預設和聊天訊息。如果在現有對話中切換服務供應商，下一次請求會把該對話上下文傳送給新的服務供應商。使用前請自行查看相應服務供應商的隱私政策。
 
-文章缓存、查询历史、AI 配置、预设和聊天记录保存在本机。AI API Key 会单独保存在 Apple Keychain 中，不会写入源代码。
+文章快取、查詢紀錄、AI 設定、預設和聊天紀錄儲存在本機。AI API Key 會單獨儲存在 Apple Keychain 中，不會寫入原始碼。
 
-## 项目状态
+## 專案狀態
 
-PumpNet 仍在持续开发中，目前是私人项目。本仓库没有授予开源许可证。
+PumpNet 仍在持續開發中，目前是私人專案。本儲存庫沒有授予開源授權。
