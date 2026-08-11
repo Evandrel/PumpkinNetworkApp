@@ -97,7 +97,7 @@ Article caches, search histories, AI configurations, presets, and chat histories
 
 ## Status
 
-PumpNet is under active development and is currently a private project. No open-source license is granted by this repository.
+PumpNet app is currently in beta stage, and it even doesn't have a official name, we're just started
 
 ---
 
@@ -198,6 +198,4 @@ IP 查詢服務供應商能看到連線所使用的公開 IP。AI 服務供應�
 
 文章快取、查詢紀錄、AI 設定、預設和聊天紀錄儲存在本機。AI API Key 會單獨儲存在 Apple Keychain 中，不會寫入原始碼。
 
-## 專案狀態
 
-PumpNet 仍在持續開發中，目前是私人專案。本儲存庫沒有授予開源授權。
