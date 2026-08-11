@@ -21,6 +21,37 @@ struct AppAmbientBackground: View {
 
 extension View {
     @ViewBuilder
+    func circularLiquidGlass(
+        tint:Color?=nil,
+        interactive:Bool=false
+    )->some View{
+        if #available(iOS 26.0,*){
+            let baseGlass=tint.map{
+                Glass.regular.tint($0)
+            } ?? .regular
+
+            glassEffect(
+                interactive
+                    ? baseGlass.interactive()
+                    : baseGlass,
+                in:.circle
+            )
+        }else{
+            background(
+                .ultraThinMaterial,
+                in:Circle()
+            )
+            .overlay{
+                Circle()
+                    .strokeBorder(
+                        .white.opacity(0.22),
+                        lineWidth:0.75
+                    )
+            }
+        }
+    }
+
+    @ViewBuilder
     func liquidGlassSurface(cornerRadius: CGFloat, tint: Color? = nil, interactive: Bool = false) -> some View {
         if #available(iOS 26.0, *) {
             let baseGlass = tint.map { Glass.regular.tint($0) } ?? .regular

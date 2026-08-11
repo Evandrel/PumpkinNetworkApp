@@ -4,27 +4,45 @@ import Foundation
 final class AIChatViewModel: ObservableObject {
     @Published private(set) var configurations: [AIProviderConfiguration]
     @Published private(set) var selectedConfigurationID: UUID?
-    @Published private(set) var messages: [AIChatMessage] = []
-    @Published private(set) var preset = ""
-    @Published var draft = ""
-    @Published private(set) var isSending = false
+    @Published private(set) var conversations: [AIConversation]
+    @Published private(set) var sendingConversationID: UUID?
+    @Published private(set) var configurationLimitUnlocked: Bool
     @Published var errorMessage: String?
 
-    private var storedMessages: [String: [AIChatMessage]]
-    private var storedPresets: [String: String]
     private let service: AIChatService
 
     init(service: AIChatService = AIChatService()) {
         self.service = service
-        configurations = AIChatStorage.loadConfigurations()
-        storedMessages = AIChatStorage.loadMessages()
-        storedPresets = AIChatStorage.loadPresets()
+        configurationLimitUnlocked = AIChatStorage.loadConfigurationLimitUnlocked()
+        let loadedConfigurations = AIChatStorage.loadConfigurations()
+        configurations = loadedConfigurations
+
         let savedID = AIChatStorage.loadSelectedConfigurationID()
-        selectedConfigurationID = configurations.contains(where: { $0.id == savedID }) ? savedID : configurations.first?.id
-        if let id = selectedConfigurationID {
-            messages = storedMessages[id.uuidString] ?? []
-            preset = storedPresets[id.uuidString] ?? ""
+        selectedConfigurationID = loadedConfigurations.contains(where: { $0.id == savedID }) ? savedID : loadedConfigurations.first?.id
+
+        var loadedConversations = AIChatStorage.loadConversations()
+        if loadedConversations.isEmpty {
+            let oldMessages = AIChatStorage.loadMessages()
+            let oldPresets = AIChatStorage.loadPresets()
+            loadedConversations = loadedConfigurations.compactMap { configuration in
+                let messages = oldMessages[configuration.id.uuidString] ?? []
+                let preset = oldPresets[configuration.id.uuidString] ?? ""
+                guard !messages.isEmpty || !preset.isEmpty else { return nil }
+                let firstMessage = messages.first(where: { $0.role == .user })?.content
+                let title = Self.conversationTitle(from: firstMessage, fallback: "\(configuration.name) Chat")
+                return AIConversation(
+                    title: title,
+                    messages: messages,
+                    preset: preset,
+                    configurationID: configuration.id,
+                    selectedModel: configuration.selectedModel,
+                    createdAt: messages.first?.createdAt ?? Date(),
+                    updatedAt: messages.last?.createdAt ?? Date()
+                )
+            }
+            if !loadedConversations.isEmpty { AIChatStorage.saveConversations(loadedConversations) }
         }
+        conversations = loadedConversations.sorted { $0.updatedAt > $1.updatedAt }
     }
 
     var selectedConfiguration: AIProviderConfiguration? {
@@ -32,15 +50,35 @@ final class AIChatViewModel: ObservableObject {
         return configurations.first { $0.id == id }
     }
 
-    var canAddConfiguration: Bool { configurations.count < 3 }
+    var canAddConfiguration: Bool { configurations.count < 3 || configurationLimitUnlocked }
 
-    var shareText: String {
-        let title = selectedConfiguration.map { "AI Chat — \($0.name)" } ?? "AI Chat"
-        let body = messages.map { message in
+    func unlockConfigurationLimit(with code: String) -> Bool {
+        guard code.trimmingCharacters(in: .whitespacesAndNewlines) == "www.pcl2.top" else { return false }
+        configurationLimitUnlocked = true
+        AIChatStorage.saveConfigurationLimitUnlocked(true)
+        return true
+    }
+
+    func conversation(id: UUID) -> AIConversation? {
+        conversations.first { $0.id == id }
+    }
+
+    func configuration(for conversationID: UUID) -> AIProviderConfiguration? {
+        guard let configurationID = conversation(id: conversationID)?.configurationID else { return nil }
+        return configurations.first { $0.id == configurationID }
+    }
+
+    func isSending(_ conversationID: UUID) -> Bool {
+        sendingConversationID == conversationID
+    }
+
+    func shareText(for conversationID: UUID) -> String {
+        guard let conversation = conversation(id: conversationID) else { return "AI Chat" }
+        let body = conversation.messages.map { message in
             let speaker = message.role == .user ? "You" : "Assistant"
             return "\(speaker):\n\(message.content)"
         }.joined(separator: "\n\n")
-        return body.isEmpty ? title : "\(title)\n\n\(body)"
+        return body.isEmpty ? conversation.title : "\(conversation.title)\n\n\(body)"
     }
 
     func apiKey(for configuration: AIProviderConfiguration?) -> String {
@@ -53,142 +91,183 @@ final class AIChatViewModel: ObservableObject {
     }
 
     func saveConfiguration(_ configuration: AIProviderConfiguration, apiKey: String) throws {
+        let isExisting = configurations.contains { $0.id == configuration.id }
+        guard isExisting || canAddConfiguration else { throw AIChatError.maximumConfigurations }
+        try AIKeychainStore.save(apiKey: apiKey, for: configuration.id)
+
         if let index = configurations.firstIndex(where: { $0.id == configuration.id }) {
             configurations[index] = configuration
         } else {
-            guard canAddConfiguration else { throw AIChatError.maximumConfigurations }
             configurations.append(configuration)
         }
-        try AIKeychainStore.save(apiKey: apiKey, for: configuration.id)
+        for index in conversations.indices where conversations[index].configurationID == configuration.id {
+            if !configuration.availableModels.contains(conversations[index].selectedModel) {
+                conversations[index].selectedModel = configuration.selectedModel
+            }
+        }
         AIChatStorage.saveConfigurations(configurations)
+        persistConversations()
         selectConfiguration(configuration.id)
     }
 
     func selectConfiguration(_ id: UUID) {
         guard configurations.contains(where: { $0.id == id }) else { return }
         selectedConfigurationID = id
-        messages = storedMessages[id.uuidString] ?? []
-        preset = storedPresets[id.uuidString] ?? ""
         errorMessage = nil
         AIChatStorage.saveSelectedConfigurationID(id)
     }
 
-    func refreshSelectedModels() async {
-        guard let configuration = selectedConfiguration,
-              let index = configurations.firstIndex(where: { $0.id == configuration.id }) else { return }
+    func deleteConfiguration(_ configuration: AIProviderConfiguration) {
+        configurations.removeAll { $0.id == configuration.id }
+        AIKeychainStore.deleteAPIKey(for: configuration.id)
+
+        let fallback = configurations.first
+        for index in conversations.indices where conversations[index].configurationID == configuration.id {
+            conversations[index].configurationID = fallback?.id
+            conversations[index].selectedModel = fallback?.selectedModel ?? ""
+            conversations[index].updatedAt = Date()
+        }
+
+        selectedConfigurationID = fallback?.id
+        AIChatStorage.saveConfigurations(configurations)
+        AIChatStorage.saveSelectedConfigurationID(selectedConfigurationID)
+        persistConversations()
+    }
+
+    @discardableResult
+    func createConversation() -> UUID? {
+        guard let configuration = selectedConfiguration ?? configurations.first else {
+            errorMessage = AIChatError.noConfiguration.localizedDescription
+            return nil
+        }
+        let conversation = AIConversation(
+            configurationID: configuration.id,
+            selectedModel: configuration.selectedModel
+        )
+        conversations.insert(conversation, at: 0)
+        persistConversations()
+        return conversation.id
+    }
+
+    func deleteConversation(_ conversationID: UUID) {
+        conversations.removeAll { $0.id == conversationID }
+        persistConversations()
+    }
+
+    func clearConversation(_ conversationID: UUID) {
+        guard let index = conversationIndex(conversationID) else { return }
+        conversations[index].messages = []
+        conversations[index].title = "New Chat"
+        conversations[index].updatedAt = Date()
+        persistConversations()
+    }
+
+    func savePreset(_ value: String, for conversationID: UUID) {
+        guard let index = conversationIndex(conversationID) else { return }
+        conversations[index].preset = value
+        conversations[index].updatedAt = Date()
+        persistConversations()
+    }
+
+    func selectConfiguration(_ configurationID: UUID, for conversationID: UUID) {
+        guard let index = conversationIndex(conversationID),
+              let configuration = configurations.first(where: { $0.id == configurationID }) else { return }
+        conversations[index].configurationID = configurationID
+        conversations[index].selectedModel = configuration.selectedModel
+        conversations[index].updatedAt = Date()
+        selectedConfigurationID = configurationID
+        AIChatStorage.saveSelectedConfigurationID(configurationID)
+        persistConversations()
+    }
+
+    func selectModel(_ model: String, for conversationID: UUID) {
+        guard let index = conversationIndex(conversationID),
+              let configuration = configuration(for: conversationID),
+              configuration.availableModels.contains(model) else { return }
+        conversations[index].selectedModel = model
+        conversations[index].updatedAt = Date()
+        persistConversations()
+    }
+
+    func refreshModels(for conversationID: UUID) async {
+        guard let configuration = configuration(for: conversationID),
+              let configurationIndex = configurations.firstIndex(where: { $0.id == configuration.id }) else { return }
         do {
             let models = try await fetchModels(baseURL: configuration.baseURL, apiKey: apiKey(for: configuration))
             guard !models.isEmpty else { throw AIChatError.noModel }
-            configurations[index].availableModels = models
-            if !models.contains(configurations[index].selectedModel) {
-                configurations[index].selectedModel = models[0]
+            configurations[configurationIndex].availableModels = models
+            if !models.contains(configurations[configurationIndex].selectedModel) {
+                configurations[configurationIndex].selectedModel = models[0]
+            }
+            if let conversationIndex = conversationIndex(conversationID), !models.contains(conversations[conversationIndex].selectedModel) {
+                conversations[conversationIndex].selectedModel = configurations[configurationIndex].selectedModel
             }
             AIChatStorage.saveConfigurations(configurations)
+            persistConversations()
         } catch {
             errorMessage = error.localizedDescription
         }
     }
 
-    func updateSelectedModel(_ model: String) {
-        guard let id = selectedConfigurationID,
-              let index = configurations.firstIndex(where: { $0.id == id }),
-              configurations[index].availableModels.contains(model) else { return }
-        configurations[index].selectedModel = model
-        AIChatStorage.saveConfigurations(configurations)
-    }
-
-    func deleteConfiguration(_ configuration: AIProviderConfiguration) {
-        configurations.removeAll { $0.id == configuration.id }
-        storedMessages.removeValue(forKey: configuration.id.uuidString)
-        storedPresets.removeValue(forKey: configuration.id.uuidString)
-        AIKeychainStore.deleteAPIKey(for: configuration.id)
-        AIChatStorage.saveConfigurations(configurations)
-        AIChatStorage.saveMessages(storedMessages)
-        AIChatStorage.savePresets(storedPresets)
-        selectedConfigurationID = configurations.first?.id
-        if let id = selectedConfigurationID {
-            messages = storedMessages[id.uuidString] ?? []
-            preset = storedPresets[id.uuidString] ?? ""
-        } else {
-            messages = []
-            preset = ""
-        }
-        AIChatStorage.saveSelectedConfigurationID(selectedConfigurationID)
-    }
-
-    func savePreset(_ value: String) {
-        guard let id = selectedConfigurationID else { return }
-        preset = value
-        storedPresets[id.uuidString] = value
-        AIChatStorage.savePresets(storedPresets)
-    }
-
-    func clearMessages() {
-        guard let id = selectedConfigurationID else { return }
-        messages = []
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        storedMessages[id.uuidString] = []
-        AIChatStorage.saveMessages(storedMessages)
-    }
-
-    func send() async {
-        let content = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !content.isEmpty, !isSending else { return }
-        guard let configuration = selectedConfiguration else {
+    func send(_ text: String, in conversationID: UUID) async {
+        let content = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !content.isEmpty, sendingConversationID == nil else { return }
+        guard let index = conversationIndex(conversationID) else { return }
+        guard var configuration = configuration(for: conversationID) else {
             errorMessage = AIChatError.noConfiguration.localizedDescription
             return
         }
-        guard !configuration.selectedModel.isEmpty else {
+        let selectedModel = conversations[index].selectedModel
+        guard !selectedModel.isEmpty else {
             errorMessage = AIChatError.noModel.localizedDescription
             return
         }
 
-        draft = ""
+        let wasEmpty = conversations[index].messages.isEmpty
+        conversations[index].messages.append(AIChatMessage(role: .user, content: content))
+        if wasEmpty {
+            conversations[index].title = Self.conversationTitle(from: content, fallback: "New Chat")
+        }
+        conversations[index].updatedAt = Date()
+        let requestMessages = conversations[index].messages
+        let requestPreset = conversations[index].preset
+        configuration.selectedModel = selectedModel
+        persistConversations()
+
         errorMessage = nil
-        let userMessage = AIChatMessage(role: .user, content: content)
-        messages.append(userMessage)
-        persistCurrentMessages()
-        isSending = true
-        defer { isSending = false }
+        sendingConversationID = conversationID
+        defer { sendingConversationID = nil }
 
         do {
             let response = try await service.complete(
                 configuration: configuration,
                 apiKey: apiKey(for: configuration),
-                messages: messages,
-                preset: preset
+                messages: requestMessages,
+                preset: requestPreset
             )
-            messages.append(AIChatMessage(role: .assistant, content: response))
-            persistCurrentMessages()
+            guard let updatedIndex = conversationIndex(conversationID) else { return }
+            conversations[updatedIndex].messages.append(AIChatMessage(role: .assistant, content: response))
+            conversations[updatedIndex].updatedAt = Date()
+            persistConversations()
         } catch {
             errorMessage = error.localizedDescription
         }
     }
 
-    private func persistCurrentMessages() {
-        guard let id = selectedConfigurationID else { return }
-        storedMessages[id.uuidString] = messages
-        AIChatStorage.saveMessages(storedMessages)
+    private func conversationIndex(_ id: UUID) -> Int? {
+        conversations.firstIndex { $0.id == id }
+    }
+
+    private func persistConversations() {
+        conversations.sort { $0.updatedAt > $1.updatedAt }
+        AIChatStorage.saveConversations(conversations)
+    }
+
+    private static func conversationTitle(from text: String?, fallback: String) -> String {
+        guard let text else { return fallback }
+        let firstLine = text.split(whereSeparator: \.isNewline).first.map(String.init) ?? text
+        let trimmed = firstLine.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return fallback }
+        return String(trimmed.prefix(40))
     }
 }

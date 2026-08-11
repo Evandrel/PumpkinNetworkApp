@@ -35,6 +35,37 @@ struct AIChatMessage: Codable, Identifiable, Equatable {
     }
 }
 
+struct AIConversation: Codable, Identifiable, Equatable {
+    let id: UUID
+    var title: String
+    var messages: [AIChatMessage]
+    var preset: String
+    var configurationID: UUID?
+    var selectedModel: String
+    let createdAt: Date
+    var updatedAt: Date
+
+    init(
+        id: UUID = UUID(),
+        title: String = "New Chat",
+        messages: [AIChatMessage] = [],
+        preset: String = "",
+        configurationID: UUID?,
+        selectedModel: String,
+        createdAt: Date = Date(),
+        updatedAt: Date = Date()
+    ) {
+        self.id = id
+        self.title = title
+        self.messages = messages
+        self.preset = preset
+        self.configurationID = configurationID
+        self.selectedModel = selectedModel
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+}
+
 enum AIChatError: LocalizedError {
     case invalidBaseURL
     case insecureBaseURL

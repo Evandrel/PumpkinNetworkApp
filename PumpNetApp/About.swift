@@ -9,6 +9,7 @@ struct About:View{
     
     @State private var pumpkinNetworkAppText = ""
     @State private var versionText = ""
+    private var appVersion:String{Bundle.main.object(forInfoDictionaryKey:"CFBundleShortVersionString")as? String ?? "Unknown"}
     var body:some View{
         NavigationStack{
             VStack(spacing:8){
@@ -37,7 +38,7 @@ struct About:View{
                         .contentTransition(.numericText())
                         .onAppear() {
                             withAnimation(.smooth(duration: 10)) {
-                                versionText = "Version 0.0.1\n Insider Beta"
+                                versionText = "Version \(appVersion)\n Insider Beta"
                             }
                         }
                         .onDisappear {

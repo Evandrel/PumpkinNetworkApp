@@ -6,6 +6,9 @@ struct AIConfigurationListView: View {
     @State private var showingNewConfiguration = false
     @State private var editingConfiguration: AIProviderConfiguration?
     @State private var configurationToDelete: AIProviderConfiguration?
+    @State private var showingUnlockPrompt = false
+    @State private var showingInvalidUnlockCode = false
+    @State private var unlockCode = ""
 
     var body: some View {
         NavigationStack {
@@ -27,15 +30,23 @@ struct AIConfigurationListView: View {
                 } header: {
                     Text("Configurations")
                 } footer: {
-                    Text("You can save up to three OpenAI-compatible providers. API keys are stored securely in Keychain.")
+                    Text(viewModel.configurationLimitUnlocked ? "The configuration limit is unlocked. API keys are stored securely in Keychain." : "You can save up to three OpenAI-compatible providers. API keys are stored securely in Keychain.")
                 }
 
-                if viewModel.canAddConfiguration {
-                    Section {
+                Section {
+                    if viewModel.canAddConfiguration {
                         Button {
                             showingNewConfiguration = true
                         } label: {
                             Label("Add Configuration", systemImage: "plus.circle.fill")
+                                .foregroundStyle(.green)
+                        }
+                    } else {
+                        Button {
+                            unlockCode = ""
+                            showingUnlockPrompt = true
+                        } label: {
+                            Label("Unlock More Configurations", systemImage: "lock.open.fill")
                                 .foregroundStyle(.green)
                         }
                     }
@@ -71,6 +82,25 @@ struct AIConfigurationListView: View {
                 Button("Cancel", role: .cancel) { configurationToDelete = nil }
             } message: {
                 Text("Its API key, preset and chat history will be removed from this device.")
+            }
+            .alert("Unlock More Configurations", isPresented: $showingUnlockPrompt) {
+                SecureField("Unlock Code", text: $unlockCode)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                Button("Unlock") {
+                    if !viewModel.unlockConfigurationLimit(with: unlockCode) {
+                        showingInvalidUnlockCode = true
+                    }
+                    unlockCode = ""
+                }
+                Button("Cancel", role: .cancel) { unlockCode = "" }
+            } message: {
+                Text("Enter the unlock code to add a fourth configuration and remove the configuration limit on this device.")
+            }
+            .alert("Incorrect Unlock Code", isPresented: $showingInvalidUnlockCode) {
+                Button("OK") {}
+            } message: {
+                Text("The unlock code is incorrect.")
             }
         }
     }

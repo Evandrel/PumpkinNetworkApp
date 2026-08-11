@@ -6,6 +6,8 @@ enum AIChatStorage {
     private static let selectedConfigurationKey = "aiChat.selectedConfiguration.v1"
     private static let messagesKey = "aiChat.messages.v1"
     private static let presetsKey = "aiChat.presets.v1"
+    private static let conversationsKey = "aiChat.conversations.v1"
+    private static let configurationLimitUnlockedKey = "aiChat.configurationLimitUnlocked.v1"
 
     static func loadConfigurations() -> [AIProviderConfiguration] {
         guard let data = UserDefaults.standard.data(forKey: configurationsKey) else { return [] }
@@ -44,6 +46,24 @@ enum AIChatStorage {
     static func savePresets(_ presets: [String: String]) {
         guard let data = try? JSONEncoder().encode(presets) else { return }
         UserDefaults.standard.set(data, forKey: presetsKey)
+    }
+
+    static func loadConversations() -> [AIConversation] {
+        guard let data = UserDefaults.standard.data(forKey: conversationsKey) else { return [] }
+        return (try? JSONDecoder().decode([AIConversation].self, from: data)) ?? []
+    }
+
+    static func saveConversations(_ conversations: [AIConversation]) {
+        guard let data = try? JSONEncoder().encode(conversations) else { return }
+        UserDefaults.standard.set(data, forKey: conversationsKey)
+    }
+
+    static func loadConfigurationLimitUnlocked() -> Bool {
+        UserDefaults.standard.bool(forKey: configurationLimitUnlockedKey)
+    }
+
+    static func saveConfigurationLimitUnlocked(_ unlocked: Bool) {
+        UserDefaults.standard.set(unlocked, forKey: configurationLimitUnlockedKey)
     }
 }
 
