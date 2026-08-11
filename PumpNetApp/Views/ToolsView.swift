@@ -27,6 +27,14 @@ struct ToolsView: View {
                         toolLabel("IP Lookup", subtitle: "See your public IP and network information", systemImage: "network")
                     }
                 }
+
+                Section("AI") {
+                    NavigationLink {
+                        AIChatView()
+                    } label: {
+                        toolLabel("AI Chat", subtitle: "Chat with your own AI providers and models", systemImage: "bubble.left.and.text.bubble.right.fill")
+                    }
+                }
             }
             .navigationTitle("Tools")
         }
